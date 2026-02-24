@@ -18,6 +18,11 @@ def _load_json_to_dataframe(file_name):
     if "" in df.columns:
         df.drop(columns=[""], inplace=True)
         
+    df.replace("", pd.NA, inplace=True)
+    df.dropna(how='all', inplace=True)
+    df.fillna("", inplace=True)
+    df.reset_index(drop=True, inplace=True)
+        
     return df
 
 
@@ -41,7 +46,14 @@ def process_classes(file_name="classes.json"):
 
 
 def process_routes(file_name="routes.json"):
-    return _load_json_to_dataframe(file_name)
+    df = _load_json_to_dataframe(file_name)
+    
+    if 'route_short_name' in df.columns:
+        df = df[df['route_short_name'] != " = "]
+        
+        df.reset_index(drop=True, inplace=True)
+        
+    return df
 
 
 def process_stops(file_name="stops.json"):
@@ -115,7 +127,7 @@ def process_view_ontd_map(file_name="view_ontd_map.json"):
     
     for col in time_columns:
         if col in df.columns:
-            # format=‘%H:%M’ forces the exact reading “Hour:Minute”
+            # format='%H:%M' forces the exact reading "Hour:Minute"
             df[col] = pd.to_datetime(df[col], format='%H:%M', errors='coerce').dt.time
             
     return df
@@ -159,6 +171,6 @@ if __name__ == "__main__":
             print(f"Problème inattendu sur {name}.json : {str(e)}")
              
     df_routes = dataframes_collection.get("routes")
-    # dataframes_collection["view_ontd_details"].to_csv("view_ontd_details.csv", index=False, encoding="utf-8")
+    # dataframes_collection["routes"].to_csv("view_ontqzdqzdd_details.csv", index=False, encoding="utf-8")
     if df_routes is not None:
         print(df_routes.head())
