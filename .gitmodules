@@ -1,0 +1,3 @@
+[submodule "data/night-train-data"]
+	path = data/night-train-data
+	url = git@github.com:Back-on-Track-eu/night-train-data.git
