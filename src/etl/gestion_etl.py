@@ -2,7 +2,6 @@ import logging
 import pandas as pd
 from typing import List, Optional, Dict
 from sqlalchemy import create_engine, inspect, text
-from sqlalchemy.dialects.postgresql import insert
 
 # Use absolute imports instead of relative imports
 import sys
@@ -38,25 +37,40 @@ class DatabaseManager:
         """
         Méthode "magique" pour faire un UPSERT (Insert ou Update) avec Pandas et PostgreSQL.
         """
-        data = [dict(zip(keys, row)) for row in data_iter]
-        sql_table = table.table
+        from sqlalchemy.dialects.postgresql import insert
         
-        # On utilise insert() de SQLAlchemy avec clause ON CONFLICT
-        stmt = insert(sql_table).values(data)
+        data = [dict(zip(keys, row)) for row in data_iter]
+        if not data:
+            return
+            
+        sql_table = table.table
         
         # On récupère les clés primaires pour savoir sur quoi vérifier le conflit
         primary_keys = [key.name for key in sql_table.primary_key]
+        
         if not primary_keys:
             # Pas de clé primaire ? On fait un insert normal
-            conn.execute(stmt)
+            conn.execute(sql_table.insert(), data)
             return
 
+        # On utilise insert() de SQLAlchemy avec clause ON CONFLICT
+        stmt = insert(sql_table).values(data)
+        
         # Si conflit sur la clé primaire, on met à jour toutes les autres colonnes
-        update_dict = {c.name: c for c in stmt.excluded if c.name not in primary_keys}
+        # Build update dictionary: {col_name: excluded.col_name}
+        update_dict = {
+            col.name: stmt.excluded[col.name] 
+            for col in sql_table.columns 
+            if col.name not in primary_keys
+        }
         
         if update_dict:
-            upsert_stmt = stmt.on_conflict_do_update(index_elements=primary_keys, set_=update_dict)
+            upsert_stmt = stmt.on_conflict_do_update(
+                index_elements=primary_keys, 
+                set_=update_dict
+            )
         else:
+            # Si que des clés primaires, on ignore les doublons
             upsert_stmt = stmt.on_conflict_do_nothing(index_elements=primary_keys)
 
         conn.execute(upsert_stmt)
@@ -132,8 +146,6 @@ def main():
             print(f"Aperçu Data.europa.eu {name}:\n", df.head(3).to_string(index=False))
         db.load_dataset(df, table_name=name)
 
-
-    
         
 
     
