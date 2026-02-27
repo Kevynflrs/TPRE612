@@ -5,58 +5,58 @@ import io
 
 ssl._create_default_https_context = ssl._create_unverified_context 
 
-api_co2_url = "https://www.data.gouv.fr/api/1/datasets/emissions-de-co2e-perimetre-complet/"
-
-cols_utiles_co2 = [
-    "Transporteur", 
-    "Origine", 
-    "Origine_uic", 
-    "Destination", 
-    "Destination_uic", 
-    "Distance entre les gares", 
-    "Train - Empreinte carbone (kgCO2e)", 
-    "Distance aérienne", 
+API_URL = "https://www.data.gouv.fr/api/1/datasets/emissions-de-co2e-perimetre-complet/"
+COLS_UTILES = [
+    "Transporteur", "Origine", "Origine_uic", "Destination", 
+    "Destination_uic", "Distance entre les gares", 
+    "Train - Empreinte carbone (kgCO2e)", "Distance aérienne", 
     "Avion - Empreinte carbone (kgCO2e)"
 ]
+COLS_OBLIGATOIRES = [
+    "Destination", "Distance entre les gares", 
+    "Train - Empreinte carbone (kgCO2e)", "Origine"
+]
 
-def fetch_co2_data(api_url):
+def run_co2_etl(api_url):
+    """
+    Fonction ETL complète :
+    - Extract : Récupère le CSV depuis l'API data.gouv
+    - Transform : Nettoie les noms, filtre les colonnes et supprime les lignes vides
+    - Load : Retourne le DataFrame prêt à l'emploi
+    """
     try:
+        # EXTRACT
         response = requests.get(api_url)
+        response.raise_for_status()
         dataset_info = response.json()
         
-        csv_url = None
-        for resource in dataset_info.get('resources', []):
-            if resource['format'].lower() == 'csv':
-                csv_url = resource['url']
-                break
+        csv_url = next((r['url'] for r in dataset_info.get('resources', []) if r['format'].lower() == 'csv'), None)
         
-        if csv_url:
-            res = requests.get(csv_url)
-            content = res.content.decode('utf-8-sig') 
-            df_co2 = pd.read_csv(io.StringIO(content), sep=';')
-            
-            df_co2.columns = df_co2.columns.str.strip()
-            
-            colonnes_finales = [c for c in cols_utiles_co2 if c in df_co2.columns]
-            df_co2 = df_co2[colonnes_finales]
-
-            cols_critiques = ["Destination", "Distance entre les gares", "Train - Empreinte carbone (kgCO2e)", "Origine"]
-            cols_existantes = [c for c in cols_critiques if c in df_co2.columns]
-            df_co2 = df_co2.dropna(subset=cols_existantes)
-
-            print(f"\nDataset CO2 filtré et nettoyé : {len(df_co2)} lignes restantes.")
-            
-            return df_co2
-        else:
-            print("Aucune ressource CSV trouvée.")
+        if not csv_url:
+            print("Erreur : Aucune ressource CSV trouvée.")
             return None
 
+        res = requests.get(csv_url)
+        content = res.content.decode('utf-8-sig') 
+        df = pd.read_csv(io.StringIO(content), sep=';')
+
+        # TRANSFORM
+        df.columns = df.columns.str.strip()
+        cols_presentes = [c for c in COLS_UTILES if c in df.columns]
+        df = df[cols_presentes]
+        cols_a_nettoyer = [c for c in COLS_OBLIGATOIRES if c in df.columns]
+        df = df.dropna(subset=cols_a_nettoyer)
+
+        print(f"Succès : ETL terminé. {len(df)} lignes traitées.")
+        
+        # LOAD
+        return df
+
     except Exception as e:
-        print(f"Impossible de récupérer ou filtrer l'API CO2 : {e}")
+        print(f"Échec de l'ETL : {e}")
         return None
 
-df_emissions = fetch_co2_data(api_co2_url)
+df_final = run_co2_etl(API_URL)
 
-if df_emissions is not None:
-    print("\nColonnes conservées :", df_emissions.columns.tolist())
-    print(df_emissions.head())
+if df_final is not None:
+    print(df_final.head())
