@@ -40,11 +40,11 @@ for id_ds, name in dataset_ids.items():
                     df = df.dropna()
 
                 dfs[name] = df
-                print(f"[OK] {name} : Récupéré et filtré ({len(df)} lignes)")
+                print(f"{name} : Récupéré et filtré ({len(df)} lignes)")
                 break
             
     except Exception as e:
-        print(f"[ERREUR] {name} : Impossible de récupérer les données ({e})")
+        print(f"{name} : Impossible de récupérer les données ({e})")
 
 if "Gares européennes" in dfs:
     print("\n--- Aperçu du résultat final ---")
