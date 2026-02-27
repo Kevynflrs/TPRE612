@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from eurostat import get_eurostat_data
 from night_train_data import get_night_train_data
 from dataeuropa import get_data_europa
+from data_gouv import get_data_gouv
 
 # --- CONFIGURATION LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -146,10 +147,13 @@ def main():
             print(f"Aperçu Data.europa.eu {name}:\n", df.head(3).to_string(index=False))
         db.load_dataset(df, table_name=name)
 
+    # Data.gouv.fr
+    gouv_data = get_data_gouv()
+    for name, df in gouv_data.items():
+        if not df.empty:
+            print(f"Aperçu Data.gouv.fr {name}:\n", df.head(3).to_string(index=False))
+        db.load_dataset(df, table_name=name)
         
-
-    
-
 
 
 if __name__ == "__main__":
