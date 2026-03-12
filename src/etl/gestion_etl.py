@@ -12,6 +12,7 @@ from eurostat import get_eurostat_data
 from night_train_data import get_night_train_data
 from dataeuropa import get_data_europa
 from data_gouv import get_data_gouv
+from CO2 import get_co2_data
 
 # --- CONFIGURATION LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -154,6 +155,9 @@ def main():
             print(f"Aperçu Data.gouv.fr {name}:\n", df.head(3).to_string(index=False))
         db.load_dataset(df, table_name=name)
         
+    # CO2 Data
+    co2_data = get_co2_data()
+    db.load_dataset(co2_data, table_name="co2_emissions")
 
 
 if __name__ == "__main__":
