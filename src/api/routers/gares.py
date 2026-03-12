@@ -15,7 +15,7 @@ router = APIRouter()
     description="""
 Retourne la liste des gares avec filtres optionnels.
 
-**Exemples :**
+Exemples :
 - `GET /gares?city=Paris`
 - `GET /gares?country=France&is_main_station=true`
 - `GET /gares?name=Gare+de+Lyon`

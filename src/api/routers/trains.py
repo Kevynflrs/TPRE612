@@ -13,7 +13,7 @@ router = APIRouter()
     response_model=PaginatedResponse,
     summary="Lister les trains",
     description="""
-**Exemples :**
+Exemples :
 - `GET /trains?trip_headsign=TGV`
 - `GET /trains?origin=Paris`
     """,

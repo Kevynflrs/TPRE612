@@ -5,23 +5,22 @@ from routers import trajets, gares, trains, operateurs, routes, stats
 app = FastAPI(
     title="API Dessertes Ferroviaires",
     description="""
-## API REST – Dessertes Ferroviaires
+API REST – Dessertes Ferroviaires
 
 Cette API expose les données ferroviaires collectées et transformées dans le data warehouse.
 
-### Fonctionnalités
+Fonctionnalités
 - Consultation des trajets avec filtres multicritères
 - Recherche de gares par ville, pays
 - Statistiques : émissions CO2, fréquentation, performance
 - Compatible Grafana (JSON datasource)
     """,
     version="1.0.0",
-    contact={"name": "Équipe Data", "email": "data@example.com"},
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # À restreindre en production
+    allow_origins=["*"],  # À restreindre plus tard
     allow_credentials=True,
     allow_methods=["GET"],
     allow_headers=["*"],

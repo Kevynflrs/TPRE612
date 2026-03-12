@@ -14,10 +14,10 @@ router = APIRouter()
     description="""
 Statistiques d'émissions CO2 agrégées, idéal pour Grafana.
 
-**Exemples :**
-- `GET /stats/emissions` → toutes les émissions par opérateur
-- `GET /stats/emissions?group_by=route` → par ligne ferroviaire
-- `GET /stats/emissions?operateur=SNCF` → filtré sur un opérateur
+Exemples :
+- `GET /stats/emissions` -> toutes les émissions par opérateur
+- `GET /stats/emissions?group_by=route` -> par ligne ferroviaire
+- `GET /stats/emissions?operateur=SNCF` -> filtré sur un opérateur
     """,
 )
 def get_emissions(
@@ -161,8 +161,8 @@ def get_performance(
 
 @router.get(
     "/resume",
-    summary="Résumé global (KPIs)",
-    description="Chiffres clés globaux — parfait pour les panels KPI Grafana.",
+    summary="Résumé global",
+    description="Chiffres clés globaux.",
 )
 def get_resume(db: Session = Depends(get_db)):
     result = db.query(

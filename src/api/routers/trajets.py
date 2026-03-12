@@ -16,7 +16,7 @@ router = APIRouter()
     description="""
 Retourne la liste des trajets ferroviaires avec filtres optionnels.
 
-**Exemples de requêtes :**
+Exemples de requêtes :
 - `GET /trajets?ville_depart=Paris&ville_arrivee=Lyon`
 - `GET /trajets?operateur=SNCF&page=1&page_size=20`
 - `GET /trajets?distance_min=100&distance_max=500`
