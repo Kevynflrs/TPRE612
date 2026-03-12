@@ -5,8 +5,8 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context 
 
 dataset_ids = {
-    "5be56fd6634f4161bdf03fb2": "Gares européennes",
-    "5dccd2aa06e3e70687832c57": "Horaires des gares"
+    "5be56fd6634f4161bdf03fb2": "gares_europeennes",
+    "5dccd2aa06e3e70687832c57": "horaires_des_gares"
 }
 
 cols_gares = [
@@ -32,7 +32,7 @@ def get_data_gouv():
                 if res['format'].upper() == 'CSV':
                     df = pd.read_csv(res['url'], storage_options={'verify_ssl': False}, sep=None, engine='python')
                     
-                    if name == "Gares européennes":
+                    if name == "gares_europeennes":
                         df = df[[c for c in cols_gares if c in df.columns]]
                         
                         cols_to_check = [c for c in cols_obligatoires if c in df.columns]
@@ -48,6 +48,6 @@ def get_data_gouv():
             print(f"{name} : Impossible de récupérer les données ({e})")
     return dfs
 
-# if "Gares européennes" in dfs:
+# if "gares_europeennes" in dfs:
 #     print("\n--- Aperçu du résultat final ---")
-#     print(dfs["Gares européennes"].head())
+#     print(dfs["gares_europeennes"].head())

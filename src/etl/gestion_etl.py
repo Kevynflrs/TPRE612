@@ -31,9 +31,10 @@ DB_CONFIG = {
 class DatabaseManager:
     """Classe utilitaire pour gérer la connexion et l'écriture en base de données."""
     
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, schema: str = "public"):
         url = f"postgresql://{config['user']}:{config['password']}@{config['host']}:{config['port']}/{config['dbname']}"
         self.engine = create_engine(url)
+        self.schema = schema
 
     def _upsert_method(self, table, conn, keys, data_iter):
         """
@@ -87,18 +88,18 @@ class DatabaseManager:
             inspector = inspect(self.engine)
             
             # Si la table n'existe pas, on la crée proprement avec des clés primaires
-            if not inspector.has_table(table_name):
-                logger.info(f"Création de la table '{table_name}'...")
+            if not inspector.has_table(table_name, schema=self.schema):
+                logger.info(f"Création de la table '{table_name}' dans le schéma '{self.schema}'...")
                 # Toutes les colonnes sauf la valeur deviennent la clé primaire composite
                 pk_cols = [c for c in df.columns if c != "obs_value"]
                 
                 # Écriture initiale (échoue si existe déjà, mais on a vérifié avant)
-                df.to_sql(table_name, self.engine, if_exists='fail', index=False)
+                df.to_sql(table_name, self.engine, if_exists='fail', index=False, schema=self.schema)
                 
                 # Ajout de la contrainte Primary Key (indispensable pour l'upsert futur)
                 with self.engine.connect() as conn:
                     pk_str = ", ".join([f'"{c}"' for c in pk_cols])
-                    conn.execute(text(f'ALTER TABLE "{table_name}" ADD PRIMARY KEY ({pk_str})'))
+                    conn.execute(text(f'ALTER TABLE "{self.schema}"."{table_name}" ADD PRIMARY KEY ({pk_str})'))
                     conn.commit()
             else:
                 # Si la table existe, on utilise le mode UPSERT
@@ -108,7 +109,8 @@ class DatabaseManager:
                     self.engine, 
                     if_exists='append', 
                     index=False, 
-                    method=self._upsert_method  # Utilise notre méthode personnalisée
+                    method=self._upsert_method,  # Utilise notre méthode personnalisée
+                    schema=self.schema
                 )
             
             logger.info(f"Succès pour '{table_name}'.")
@@ -120,7 +122,7 @@ class DatabaseManager:
 def main():
     # Initialiser la connexion DB
     try:
-        db = DatabaseManager(DB_CONFIG)
+        db = DatabaseManager(DB_CONFIG, schema="tpre612_dataset_clean")
         logger.info("Connexion Base de données OK.")
     except Exception as e:
         logger.critical(f"Impossible de se connecter à la DB : {e}")

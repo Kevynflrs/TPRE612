@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 DATASETS_CONFIG = {
     "rail_tf_traveh": {
         "url": "http://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_tf_traveh/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
-        "drop_cols": ["freq"],
+        "drop_cols": ["freq", "unit"],
         "name": "train_traffic_source_energy"
     },
     "rail_tf_passmov": {
         "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_tf_passmov/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
-        "drop_cols": ["freq"],
+        "drop_cols": ["freq", "unit"],
         "name": "passenger_traffic_train_speed"
     },
     "rail_pa_total": {
