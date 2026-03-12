@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
-from api.db.database import get_db
+from src.api.db.database import get_db
 from models.models import DimGare
 from schemas.schemas import GareBase, PaginatedResponse
 
