@@ -1,6 +1,6 @@
 # API REST – Dessertes Ferroviaires
 
-Documentation technique de l'API REST exposant les données ferroviaires de l'entrepôt de données.
+Documentation technique de l'API REST exposant les données ferroviaires du data warehouse.
 
 ---
 
@@ -8,7 +8,7 @@ Documentation technique de l'API REST exposant les données ferroviaires de l'en
 
 ### Prérequis
 - Python 3.10+
-- PostgreSQL (base existante avec le schéma en étoile)
+- PostgreSQL
 
 ### Mise en place
 
