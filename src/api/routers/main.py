@@ -7,7 +7,7 @@ app = FastAPI(
     description="""
 ## API REST – Dessertes Ferroviaires
 
-Cette API expose les données ferroviaires collectées et transformées dans l'entrepôt de données.
+Cette API expose les données ferroviaires collectées et transformées dans le data warehouse.
 
 ### Fonctionnalités
 - Consultation des trajets avec filtres multicritères
