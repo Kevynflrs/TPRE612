@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, literal
 from typing import Optional
 from src.api.db.database import get_db
-from models.models import FactTrajetTrain, DimOperateur, DimGare, DimRoute
+from src.api.models.models import FactTrajetTrain, DimOperateur, DimGare, DimRoute
 
 router = APIRouter()
 
