@@ -1,122 +1,163 @@
-"""
-eurostat_etl.py
----------------
-ETL pipeline for fetching and transforming Eurostat TSV data.
-Produces clean, typed DataFrames ready for database ingestion.
-"""
-
-import logging
 import re
 from io import StringIO
-
+from typing import List
 import pandas as pd
 import requests
-
-logging.basicConfig(
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    level=logging.INFO,
-)
+import logging
+from functools import reduce
+import operator
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+
+DATASETS_CONFIG = {
+    "rail_tf_traveh": {
+        "url": "http://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_tf_traveh/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
+        "drop_cols": ["freq", "unit"],
+        "name": "train_traffic_source_energy"
+    },
+    "rail_tf_passmov": {
+        "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_tf_passmov/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
+        "drop_cols": ["freq", "unit"],
+        "name": "passenger_traffic_train_speed"
+    },
+    "rail_pa_total": {
+        "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_pa_total/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
+        "drop_cols": ["freq"],
+        "name": "passenger_transported"
+    },
+    "env_ac_ainah_r2": {
+        "url": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/env_ac_ainah_r2/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
+        "drop_cols": ["freq"],
+        "keep_rows": [{"nace_r2": "H49"}, {"nace_r2": "H51"}],
+        "name": "air_emissions"
+    },
+}
 
 VALUE_PATTERN = re.compile(r"(\d+\.?\d*)")
 
 
-def extract(url: str) -> pd.DataFrame:
-    """Fetch a Eurostat TSV file and return the raw DataFrame."""
+def fetch_data(url: str) -> pd.DataFrame:
+    """Télécharge le fichier TSV et le convertit en DataFrame brut."""
     try:
         response = requests.get(url, timeout=30)
         response.raise_for_status()
+        # On lit tout en string (dtype=str) pour éviter les erreurs de parsing initiales
         return pd.read_csv(StringIO(response.text), sep="\t", dtype=str)
-    except requests.RequestException as e:
-        logger.error("Extract failed: %s", e)
+    except Exception as e:
+        logger.error(f"Erreur lors du téléchargement : {e}")
         return pd.DataFrame()
 
 
-def transform(df_raw: pd.DataFrame, drop_cols: list[str] | None, dataset_name: str = "") -> pd.DataFrame:
+def transform_data(df: pd.DataFrame, drop_cols: List[str], keep_rows: List[dict] = None) -> pd.DataFrame:
     """
-    Parse a raw Eurostat TSV DataFrame into a clean long-format table.
-    Adds a 'dataset' column for database provenance tracking.
+    Nettoie les données : transforme le format large en format long,
+    sépare les colonnes combinées et supprime les colonnes inutiles.
     """
-    if df_raw.empty:
-        return pd.DataFrame()
+    if df.empty:
+        return df
 
-    df = df_raw.copy()
+    # Nettoyage des noms de colonnes
     df.columns = df.columns.str.strip()
 
-    # Parse the composite first column, e.g. "freq,train,vehicle\TIME_PERIOD"
-    composite_col = df.columns[0]
-    if "\\" not in composite_col:
-        logger.error("Unexpected first column format: '%s'", composite_col)
+    # La première colonne est complexe (ex: "freq,train,vehicle\TIME_PERIOD")
+    first_col = df.columns[0]
+    if "\\" not in first_col:
+        logger.error(f"Format de colonne inattendu : {first_col}")
         return pd.DataFrame()
 
-    dim_part, time_col = composite_col.split("\\", 1)
-    dim_names = [d.strip() for d in dim_part.split(",")]
-    time_col = time_col.strip() or "period"
+    # Séparation "Dimensions" \ "Temps"
+    dims_str, time_col_name = first_col.split("\\", 1)
+    dim_names = [d.strip() for d in dims_str.split(",")]
+    time_col_name = time_col_name.strip() or "period"
 
-    # Melt to long format
-    df_long = df.melt(id_vars=[composite_col], var_name=time_col, value_name="value_raw")
-    df_long[time_col] = df_long[time_col].str.strip()
+    # 1. Melt : Passage du format large (années en colonnes) au format long (lignes)
+    df_long = df.melt(id_vars=[first_col],
+                      var_name=time_col_name, value_name="raw_value")
 
-    # Split composite column into individual dimension columns
-    split_data = df_long[composite_col].str.split(",", expand=True)
-    if split_data.shape[1] != len(dim_names):
-        logger.error("Dimension mismatch: expected %d, got %d", len(dim_names), split_data.shape[1])
+    # 2. Split : Éclatement de la colonne composite en plusieurs colonnes
+    # Ex: "A,B,C" devient Colonne1: A, Colonne2: B, Colonne3: C
+    split_dims = df_long[first_col].str.split(",", expand=True)
+
+    # Vérification de sécurité
+    if split_dims.shape[1] != len(dim_names):
+        logger.error("Erreur: Le nombre de dimensions ne correspond pas.")
         return pd.DataFrame()
 
-    split_data.columns = dim_names
-    df_long = pd.concat([df_long.drop(columns=[composite_col]), split_data], axis=1)
+    split_dims.columns = dim_names
 
-    # Drop unwanted columns (e.g. 'freq')
-    if drop_cols:
-        df_long.drop(columns=[c for c in drop_cols if c in df_long.columns], inplace=True)
-        dim_names = [d for d in dim_names if d not in drop_cols]
+    # On remplace la colonne composite par les nouvelles colonnes propres
+    df_clean = pd.concat(
+        [split_dims, df_long.drop(columns=[first_col])], axis=1)
 
-    # Extract numeric value, stripping Eurostat flags (e.g. '123p', ':', 'e')
-    df_long["obs_value"] = pd.to_numeric(
-        df_long["value_raw"].str.extract(VALUE_PATTERN)[0], errors="coerce"
+    # 3. Nettoyage des valeurs numériques (extraction des chiffres, ignore les flags 'e', 'p')
+    df_clean["obs_value"] = pd.to_numeric(
+        df_clean["raw_value"].str.extract(VALUE_PATTERN)[0], errors="coerce"
     )
-    df_long.drop(columns=["value_raw"], inplace=True)
+    df_clean.drop(columns=["raw_value"], inplace=True)
 
-    # Strip whitespace from all string columns
-    str_cols = df_long.select_dtypes(include="object").columns
-    df_long[str_cols] = df_long[str_cols].apply(lambda s: s.str.strip())
+    # 4. Suppression des colonnes demandées (Feature demandée)
+    if drop_cols:
+        existing_cols_to_drop = [c for c in drop_cols if c in df_clean.columns]
+        if existing_cols_to_drop:
+            df_clean.drop(columns=existing_cols_to_drop, inplace=True)
+            logger.info(f"Colonnes supprimées : {existing_cols_to_drop}")
 
-    # Add provenance and sort
-    # df_long["dataset"] = dataset_name
-    df_long.sort_values(by=dim_names + [time_col], inplace=True, ignore_index=True)
+    # 5. Nettoyage final (espaces vides)
+    str_cols = df_clean.select_dtypes(include="object").columns
+    df_clean[str_cols] = df_clean[str_cols].apply(lambda x: x.str.strip())
+    
+    # 6. Filtrage des lignes selon les critères spécifiques (si fournis)
+    if keep_rows:
+        logger.info(f"Lignes avant filtrage : {len(df_clean)}")
+        logger.info(f"Colonnes disponibles : {df_clean.columns.tolist()}")
+        
+        # Check if filter columns exist
+        for filter_dict in keep_rows:
+            for col in filter_dict.keys():
+                if col not in df_clean.columns:
+                    logger.warning(f"⚠️  Colonne '{col}' introuvable dans le DataFrame!")
+                else:
+                    unique_vals = df_clean[col].unique()
+                    logger.info(f"Valeurs uniques dans '{col}': {unique_vals[:10]}... (total: {len(unique_vals)})")
 
-    logger.info("[%s] %d rows, columns: %s", dataset_name, len(df_long), df_long.columns.tolist())
-    return df_long
+        # Vectorized: Create a mask for each filter dict (AND within, OR between)
+        masks = [
+            reduce(operator.and_,
+                   (df_clean[col] == val for col, val in filter_dict.items()))
+            for filter_dict in keep_rows
+        ]
+        
+        # Log individual mask counts
+        for i, mask in enumerate(masks):
+            logger.info(f"Mask {i} ({keep_rows[i]}): {mask.sum()} lignes correspondent")
+        
+        # Combine all masks with OR
+        final_mask = reduce(operator.or_, masks)
+        logger.info(f"Masque final combiné (OR): {final_mask.sum()} lignes")
+        
+        df_clean = df_clean[final_mask]
+        logger.info(f"Lignes après filtrage : {len(df_clean)}")
+
+    return df_clean
 
 
-def run_pipeline(url: str, dataset_name: str, drop_cols: list[str] | None) -> pd.DataFrame:
-    """Run extract + transform for a single dataset."""
-    logger.info("Processing '%s'...", dataset_name)
-    return transform(extract(url), drop_cols=drop_cols, dataset_name=dataset_name)
+def get_eurostat_data():
+    eurostat_data = {}
+    for id, config in DATASETS_CONFIG.items():
+        logger.info(f"--- Traitement de : {id} ---")
+
+        # A. Extract
+        df_raw = fetch_data(config["url"])
+
+        # B. Transform (avec les colonnes spécifiques à supprimer)
+        df_clean = transform_data(
+            df_raw, drop_cols=config["drop_cols"], keep_rows=config.get("keep_rows", None))
+
+        eurostat_data[config["name"]] = df_clean
+
+    return eurostat_data
 
 
-# ---------------------------------------------------------------------------
-# Datasets
-# ---------------------------------------------------------------------------
-DATASETS = {
-    "rail_tf_traveh":  "http://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_tf_traveh/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
-    "rail_tf_passmov": "https://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_tf_passmov/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
-    "rail_pa_total":   "https://ec.europa.eu/eurostat/api/dissemination/sdmx/3.0/data/dataflow/ESTAT/rail_pa_total/1.0?format=TSV&compress=false&c[TIME_PERIOD]=ge:2018",
-}
-
-if __name__ == "__main__":
-    results = {
-        name: run_pipeline(url, dataset_name=name, drop_cols=["freq"])
-        for name, url in DATASETS.items()
-    }
-
-    for name, df in results.items():
-        print(f"\n=== {name} ({len(df):,} rows) ===")
-        print(df.head(10).to_string(index=False))
-
-    # -- Database loading goes here --
-    # from sqlalchemy import create_engine
-    # engine = create_engine("postgresql://user:pass@host/db")
-    # for name, df in results.items():
-    #     if not df.empty:
-    #         df.to_sql(name, engine, if_exists="replace", index=False)
+get_eurostat_data()

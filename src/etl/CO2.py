@@ -17,7 +17,7 @@ COLS_OBLIGATOIRES = [
     "Train - Empreinte carbone (kgCO2e)", "Origine"
 ]
 
-def run_co2_etl(api_url):
+def get_co2_data():
     """
     Fonction ETL complète :
     - Extract : Récupère le CSV depuis l'API data.gouv
@@ -26,7 +26,7 @@ def run_co2_etl(api_url):
     """
     try:
         # EXTRACT
-        response = requests.get(api_url)
+        response = requests.get(API_URL)
         response.raise_for_status()
         dataset_info = response.json()
         
@@ -56,7 +56,7 @@ def run_co2_etl(api_url):
         print(f"Échec de l'ETL : {e}")
         return None
 
-df_final = run_co2_etl(API_URL)
+df_final = get_co2_data()
 
 if df_final is not None:
     print(df_final.head())
