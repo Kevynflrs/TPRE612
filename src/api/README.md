@@ -42,23 +42,22 @@ Documentation ReDoc : `http://localhost:8000/redoc`
 
 ```
 api/
-├── app/
-│   ├── main.py               # Point d'entrée FastAPI
-│   ├── db/
-│   │   └── database.py       # Connexion SQLAlchemy
-│   ├── models/
-│   │   └── models.py         # Modèles ORM (tables BDD)
-│   ├── schemas/
-│   │   └── schemas.py        # Schémas Pydantic (réponses API)
-│   └── routers/
-│       ├── trajets.py        # /trajets
-│       ├── gares.py          # /gares
-│       ├── trains.py         # /trains
-│       ├── operateurs.py     # /operateurs
-│       ├── routes.py         # /routes
-│       └── stats.py          # /stats
+├── main.py               # Point d'entrée FastAPI
+├── db/
+│   └── database.py       # Connexion SQLAlchemy
+├── models/
+│   └── models.py         # Modèles ORM (tables BDD)
+├── schemas/
+│   └── schemas.py        # Schémas Pydantic (réponses API)
+├── routers/
+│   ├── trajets.py        # /trajets
+│   ├── gares.py          # /gares
+│   ├── trains.py         # /trains
+│   ├── operateurs.py     # /operateurs
+│   ├── routes.py         # /routes
+│   └── stats.py          # /stats
 ├── requirements.txt
-├── .env.example
+├── .env
 └── README.md
 ```
 
