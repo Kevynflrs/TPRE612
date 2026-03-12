@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy.orm import Session, joinedload, aliased
 from typing import Optional
 from db.database import get_db
 from models.models import FactTrajetTrain, DimGare, DimTrain, DimOperateur
@@ -52,21 +51,37 @@ def get_trajets(
         joinedload(FactTrajetTrain.route),
     )
 
-    # Jointures pour filtres sur dimensions
-    GareDepart = DimGare.__table__.alias("gare_dep")
-    GareArrivee = DimGare.__table__.alias("gare_arr")
+    # Jointures pour filtres sur les gares
+    gare_depart_alias = aliased(DimGare)
+    gare_arrivee_alias = aliased(DimGare)
+    gare_depart_joined = False
+    gare_arrivee_joined = False
 
-    if ville_depart:
+    if ville_depart or pays_depart:
         query = query.join(
-            DimGare, FactTrajetTrain.gare_depart_id == DimGare.gare_id
-        ).filter(DimGare.city.ilike(f"%{ville_depart}%"))
+            gare_depart_alias,
+            FactTrajetTrain.gare_depart_id == gare_depart_alias.gare_id,
+        )
+        gare_depart_joined = True
 
-    if ville_arrivee:
-        GareDest = DimGare.__class__
+    if ville_arrivee or pays_arrivee:
         query = query.join(
-            DimGare.__class__,
-            FactTrajetTrain.gare_arrivee_id == DimGare.__class__.gare_id,
-        ).filter(DimGare.__class__.city.ilike(f"%{ville_arrivee}%"))
+            gare_arrivee_alias,
+            FactTrajetTrain.gare_arrivee_id == gare_arrivee_alias.gare_id,
+        )
+        gare_arrivee_joined = True
+
+    if ville_depart and gare_depart_joined:
+        query = query.filter(gare_depart_alias.city.ilike(f"%{ville_depart}%"))
+
+    if ville_arrivee and gare_arrivee_joined:
+        query = query.filter(gare_arrivee_alias.city.ilike(f"%{ville_arrivee}%"))
+
+    if pays_depart and gare_depart_joined:
+        query = query.filter(gare_depart_alias.country.ilike(f"%{pays_depart}%"))
+
+    if pays_arrivee and gare_arrivee_joined:
+        query = query.filter(gare_arrivee_alias.country.ilike(f"%{pays_arrivee}%"))
 
     if operateur:
         query = query.join(DimOperateur).filter(

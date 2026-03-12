@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, literal
 from typing import Optional
 from db.database import get_db
 from models.models import FactTrajetTrain, DimOperateur, DimGare, DimRoute
@@ -91,12 +91,12 @@ def get_frequentation(
             DimGare.name.label("gare"),
             DimGare.city.label("ville"),
             DimGare.country.label("pays"),
-            func.sum(FactTrajetTrain.passengers).label("total_passengers"),
+            literal(0.0).label("total_passengers"),
             func.count(FactTrajetTrain.fact_id).label("nb_trajets"),
         )
         .join(DimGare, gare_id_col == DimGare.gare_id)
         .group_by(DimGare.name, DimGare.city, DimGare.country)
-        .order_by(func.sum(FactTrajetTrain.passengers).desc())
+        .order_by(func.count(FactTrajetTrain.fact_id).desc())
     )
 
     if pays:
@@ -168,11 +168,21 @@ def get_resume(db: Session = Depends(get_db)):
     result = db.query(
         func.count(FactTrajetTrain.fact_id).label("total_trajets"),
         func.sum(FactTrajetTrain.emissions_co2).label("total_emissions_co2"),
-        func.sum(FactTrajetTrain.passengers).label("total_passengers"),
+        literal(0.0).label("total_passengers"),
         func.avg(FactTrajetTrain.distance_km).label("distance_moyenne_km"),
         func.avg(FactTrajetTrain.duree_minutes).label("duree_moyenne_minutes"),
         func.avg(FactTrajetTrain.average_speed).label("vitesse_moyenne_kmh"),
     ).first()
+
+    if result is None:
+        return {
+            "total_trajets": 0,
+            "total_emissions_co2_kg": 0.0,
+            "total_passengers": 0.0,
+            "distance_moyenne_km": 0.0,
+            "duree_moyenne_minutes": 0.0,
+            "vitesse_moyenne_kmh": 0.0,
+        }
 
     return {
         "total_trajets": result.total_trajets or 0,

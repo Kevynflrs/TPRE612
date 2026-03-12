@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
 from db.database import get_db
-from models.models import DimTrain
+from models.models import DimTrain, DimRoute
 from schemas.schemas import TrainBase, PaginatedResponse
 
 router = APIRouter()
@@ -31,9 +31,11 @@ def get_trains(
     if trip_headsign:
         query = query.filter(DimTrain.trip_headsign.ilike(f"%{trip_headsign}%"))
     if origin:
-        query = query.filter(DimTrain.origin.ilike(f"%{origin}%"))
+        query = query.filter(DimTrain.trip_origin.ilike(f"%{origin}%"))
     if destination:
-        query = query.filter(DimTrain.destination.ilike(f"%{destination}%"))
+        query = query.join(DimRoute, DimTrain.route_id == DimRoute.route_id).filter(
+            DimRoute.destination.ilike(f"%{destination}%")
+        )
 
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()

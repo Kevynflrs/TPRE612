@@ -22,7 +22,7 @@ class GareBase(BaseModel):
 #Train
 class TrainBase(BaseModel):
     trip_id: str
-    route_id: Optional[str]
+    route_id: Optional[int]
     trip_headsign: Optional[str]
     origin: Optional[str]
     destination: Optional[str]
@@ -66,7 +66,7 @@ class TrajetResponse(BaseModel):
     distance_km: Optional[float]
     duree_minutes: Optional[float]
     emissions_co2: Optional[float]
-    passengers: Optional[float]
+    # passengers: Optional[float]
     average_speed: Optional[float]
 
     gare_depart: Optional[GareBase]

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Time, Interval
 from sqlalchemy.orm import relationship
 from db.database import Base
 
@@ -11,14 +11,36 @@ class DimTrain(Base):
     __table_args__ = {"schema": SCHEMA}
 
     trip_id = Column(String, primary_key=True)
-    route_id = Column(String)
+    route_id = Column(Integer)
     trip_headsign = Column(String)
-    origin = Column(String)
-    destination = Column(String)
-    duration = Column(String)
+    trip_origin = Column(String)
+    destination_arrival_time = Column(Time)
+    duration_value = Column("duration", Interval)
     distance = Column(Float)
 
-    trajets = relationship("FactTrajetTrain", back_populates="train")
+    trajets = relationship(
+        "FactTrajetTrain",
+        foreign_keys="FactTrajetTrain.train_id",
+        back_populates="train",
+    )
+    route = relationship(
+        "DimRoute",
+        foreign_keys=[route_id],
+        primaryjoin="DimTrain.route_id == DimRoute.route_id",
+        viewonly=True,
+    )
+
+    @property
+    def origin(self):
+        return self.trip_origin
+
+    @property
+    def destination(self):
+        return self.route.destination if self.route else None
+
+    @property
+    def duration(self):
+        return str(self.duration_value) if self.duration_value is not None else None
 
 
 class DimRoute(Base):
@@ -32,7 +54,11 @@ class DimRoute(Base):
     destination = Column(String)
     countries = Column(String)
 
-    trajets = relationship("FactTrajetTrain", back_populates="route")
+    trajets = relationship(
+        "FactTrajetTrain",
+        foreign_keys="FactTrajetTrain.route_id",
+        back_populates="route",
+    )
 
 
 class DimOperateur(Base):
@@ -42,9 +68,18 @@ class DimOperateur(Base):
     agency_id = Column(String, primary_key=True)
     agency_name = Column(String)
     agency_url = Column(String)
-    agency_country = Column(String)
+    agency_timezone = Column(String)
+    agency_lang = Column(String)
 
-    trajets = relationship("FactTrajetTrain", back_populates="operateur")
+    trajets = relationship(
+        "FactTrajetTrain",
+        foreign_keys="FactTrajetTrain.operator_id",
+        back_populates="operateur",
+    )
+
+    @property
+    def agency_country(self):
+        return None
 
 
 class DimGare(Base):
@@ -86,20 +121,23 @@ class DimDate(Base):
     saturday = Column(Boolean)
     sunday = Column(Boolean)
 
-    trajets = relationship("FactTrajetTrain", back_populates="date")
+    trajets = relationship(
+        "FactTrajetTrain",
+        foreign_keys="FactTrajetTrain.date_id",
+        back_populates="date",
+    )
 
 
 class DimEnergie(Base):
     __tablename__ = "dim_energie"
     __table_args__ = {"schema": SCHEMA}
 
-    geo = Column(String, primary_key=True)
-    energy_type = Column(String)
+    energy_id = Column(Integer, primary_key=True)
+    geo = Column(String)
     vehicle = Column(String)
+    energy_type = Column(String)
     year = Column(Integer)
-    energy_consumption = Column(Float)
-
-    trajets = relationship("FactTrajetTrain", back_populates="energie")
+    energy_value = Column(Float)
 
 
 class FactTrajetTrain(Base):
@@ -116,18 +154,37 @@ class FactTrajetTrain(Base):
     distance_km = Column(Float)
     duree_minutes = Column(Float)
     emissions_co2 = Column(Float)
-    passengers = Column(Float)
     average_speed = Column(Float)
 
     # Relations
-    train = relationship("DimTrain", back_populates="trajets")
-    route = relationship("DimRoute", back_populates="trajets")
-    operateur = relationship("DimOperateur", back_populates="trajets")
+    train = relationship(
+        "DimTrain",
+        foreign_keys=[train_id],
+        primaryjoin="FactTrajetTrain.train_id == DimTrain.trip_id",
+        back_populates="trajets",
+    )
+    route = relationship(
+        "DimRoute",
+        foreign_keys=[route_id],
+        primaryjoin="FactTrajetTrain.route_id == DimRoute.route_id",
+        back_populates="trajets",
+    )
+    operateur = relationship(
+        "DimOperateur",
+        foreign_keys=[operator_id],
+        primaryjoin="FactTrajetTrain.operator_id == DimOperateur.agency_id",
+        back_populates="trajets",
+    )
     gare_depart = relationship(
         "DimGare", foreign_keys=[gare_depart_id], back_populates="trajets_depart"
     )
     gare_arrivee = relationship(
         "DimGare", foreign_keys=[gare_arrivee_id], back_populates="trajets_arrivee"
     )
-    date = relationship("DimDate", back_populates="trajets")
-    energie = relationship("DimEnergie", back_populates="trajets")
+    date = relationship(
+        "DimDate",
+        foreign_keys=[date_id],
+        primaryjoin="FactTrajetTrain.date_id == DimDate.date_id",
+        back_populates="trajets",
+    )
+    # energie = relationship("DimEnergie", back_populates="trajets")
