@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import trajets, gares, trains, operateurs, routes, stats
+from .routers import trajets, gares, trains, operateurs, routes, stats
 
 app = FastAPI(
     title="API Dessertes Ferroviaires",

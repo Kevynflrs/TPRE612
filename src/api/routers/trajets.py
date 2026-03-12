@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload, aliased
 from typing import Optional
-from db.database import get_db
+from api.db.database import get_db
 from models.models import FactTrajetTrain, DimGare, DimTrain, DimOperateur
 from schemas.schemas import TrajetResponse, PaginatedResponse
 
