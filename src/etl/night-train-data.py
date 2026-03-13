@@ -85,6 +85,8 @@ def process_trips(file_name="trips.json"):
     for col in ['origin_departure_time', 'destination_arrival_time', 'duration']:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce').dt.time
+
+    df['is_night_train'] = True
             
     return df
 
@@ -170,7 +172,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Problème inattendu sur {name}.json : {str(e)}")
              
-    df_routes = dataframes_collection.get("routes")
-    # dataframes_collection["routes"].to_csv("view_ontqzdqzdd_details.csv", index=False, encoding="utf-8")
+    df_routes = dataframes_collection.get("trips")
+    # dataframes_collection["trips"].to_csv("view_ontqzdqzdd_details.csv", index=False, encoding="utf-8")
     if df_routes is not None:
         print(df_routes.head())

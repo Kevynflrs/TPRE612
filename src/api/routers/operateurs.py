@@ -13,7 +13,7 @@ def get_operateurs(
     agency_name: Optional[str] = Query(None, description="Nom de l'opérateur (ex: SNCF)"),
     agency_country: Optional[str] = Query(None, description="Pays de l'opérateur"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1),
     db: Session = Depends(get_db),
 ):
     query = db.query(DimOperateur)

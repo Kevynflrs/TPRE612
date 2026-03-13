@@ -13,17 +13,22 @@ router = APIRouter()
     response_model=PaginatedResponse,
     summary="Lister les trains",
     description="""
+Retourne la liste des trains avec filtres optionnels.
+
 Exemples :
+- `GET /trains?is_night_train=true` -> trains de nuit uniquement
+- `GET /trains?is_night_train=false` -> trains de jour uniquement
 - `GET /trains?trip_headsign=TGV`
-- `GET /trains?origin=Paris`
+- `GET /trains?origin=Paris&is_night_train=false`
     """,
 )
 def get_trains(
     trip_headsign: Optional[str] = Query(None, description="Type de train (ex: TGV, ICE, Eurostar)"),
     origin: Optional[str] = Query(None, description="Ville d'origine"),
     destination: Optional[str] = Query(None, description="Ville de destination"),
+    is_night_train: Optional[bool] = Query(None, description="true = trains de nuit, false = trains de jour"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1),
     db: Session = Depends(get_db),
 ):
     query = db.query(DimTrain)
@@ -34,6 +39,8 @@ def get_trains(
         query = query.filter(DimTrain.origin.ilike(f"%{origin}%"))
     if destination:
         query = query.filter(DimTrain.destination.ilike(f"%{destination}%"))
+    if is_night_train is not None:
+        query = query.filter(DimTrain.is_night_train == is_night_train)
 
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()

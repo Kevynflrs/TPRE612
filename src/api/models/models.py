@@ -17,6 +17,7 @@ class DimTrain(Base):
     destination = Column(String)
     duration = Column(String)
     distance = Column(Float)
+    is_night_train = Column(Boolean, default=False)
 
     trajets = relationship("FactTrajetTrain", back_populates="train")
 
@@ -118,6 +119,7 @@ class FactTrajetTrain(Base):
     emissions_co2 = Column(Float)
     passengers = Column(Float)
     average_speed = Column(Float)
+    is_night_train = Column(Boolean, default=False)
 
     # Relations
     train = relationship("DimTrain", back_populates="trajets")
