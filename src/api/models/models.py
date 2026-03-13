@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Time, Interval
 from sqlalchemy.orm import relationship
 from src.api.db.database import Base
+from src.api.db.database import Base
 
 
 SCHEMA = "tpre612_data_warehouse"
@@ -17,6 +18,7 @@ class DimTrain(Base):
     destination_arrival_time = Column(Time)
     duration_value = Column("duration", Interval)
     distance = Column(Float)
+    is_night_train = Column(Boolean, default=False)
 
     trajets = relationship(
         "FactTrajetTrain",
@@ -155,6 +157,7 @@ class FactTrajetTrain(Base):
     duree_minutes = Column(Float)
     emissions_co2 = Column(Float)
     average_speed = Column(Float)
+    is_night_train = Column(Boolean, default=False)
 
     # Relations
     train = relationship(
@@ -181,10 +184,5 @@ class FactTrajetTrain(Base):
     gare_arrivee = relationship(
         "DimGare", foreign_keys=[gare_arrivee_id], back_populates="trajets_arrivee"
     )
-    date = relationship(
-        "DimDate",
-        foreign_keys=[date_id],
-        primaryjoin="FactTrajetTrain.date_id == DimDate.date_id",
-        back_populates="trajets",
-    )
-    # energie = relationship("DimEnergie", back_populates="trajets")
+    date = relationship("DimDate", back_populates="trajets")
+    energie = relationship("DimEnergie", back_populates="trajets")

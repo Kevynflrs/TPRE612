@@ -4,7 +4,7 @@ from datetime import date
 
 
 
-#Gare
+# Gare
 class GareBase(BaseModel):
     gare_id: int
     name: str
@@ -19,7 +19,7 @@ class GareBase(BaseModel):
 
 
 
-#Train
+# Train
 class TrainBase(BaseModel):
     trip_id: str
     route_id: Optional[int]
@@ -28,13 +28,14 @@ class TrainBase(BaseModel):
     destination: Optional[str]
     duration: Optional[str]
     distance: Optional[float]
+    is_night_train: Optional[bool]
 
     class Config:
         from_attributes = True
 
 
 
-#Opérateur
+# Opérateur
 class OperateurBase(BaseModel):
     agency_id: str
     agency_name: Optional[str]
@@ -46,7 +47,7 @@ class OperateurBase(BaseModel):
 
 
 
-#Route
+# Route
 class RouteBase(BaseModel):
     route_id: int
     agency_id: Optional[str]
@@ -60,7 +61,7 @@ class RouteBase(BaseModel):
 
 
 
-#Trajet
+# Trajet
 class TrajetResponse(BaseModel):
     fact_id: int
     distance_km: Optional[float]
@@ -80,7 +81,7 @@ class TrajetResponse(BaseModel):
 
 
 
-#Stats
+# Stats
 class StatEmissions(BaseModel):
     operateur: Optional[str]
     route: Optional[str]
@@ -105,7 +106,7 @@ class StatPerformance(BaseModel):
 
 
 
-#Pagination
+# Pagination
 class PaginatedResponse(BaseModel):
     total: int
     page: int

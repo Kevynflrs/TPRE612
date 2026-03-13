@@ -34,7 +34,6 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 L'API est disponible sur `http://localhost:8000`  
 Documentation Swagger : `http://localhost:8000/docs`  
-Documentation ReDoc : `http://localhost:8000/redoc`
 
 ---
 
@@ -91,7 +90,7 @@ api/
 | `duree_min`      | float   | Durée minimale (minutes)             | `30`              |
 | `duree_max`      | float   | Durée maximale (minutes)             | `180`             |
 | `page`           | int     | Page (défaut: 1)                     | `2`               |
-| `page_size`      | int     | Résultats/page, max 100 (défaut: 20) | `50`              |
+| `page_size`      | int     | Résultats/page, (défaut: 20) | `50`              |
 
 **Exemples de requêtes :**
 
@@ -301,6 +300,6 @@ L'API est compatible avec le plugin **JSON API datasource** de Grafana.
 ## Notes techniques
 
 - Tous les filtres textuels sont **insensibles à la casse** et acceptent des **valeurs partielles**
-- La pagination utilise `page` (base 1) et `page_size` (max 100)
+- La pagination utilise `page` (base 1) et `page_size`
 - Les réponses respectent le format JSON standard avec `Content-Type: application/json`
 - La documentation interactive Swagger est auto-générée sur `/docs`

@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import trajets, gares, trains, operateurs, routes, stats
+from src.api.routers import trajets, gares, trains, operateurs, routes, stats
 
 app = FastAPI(
-    title="API Dessertes Ferroviaires",
+    title="API Data Ferroviaires",
     description="""
-API REST – Dessertes Ferroviaires
+API REST – Data Ferroviaires
 
 Cette API expose les données ferroviaires collectées et transformées dans le data warehouse.
 
@@ -40,7 +40,6 @@ def root():
         "status": "ok",
         "message": "API Dessertes Ferroviaires v1.0.0",
         "docs": "/docs",
-        "redoc": "/redoc",
     }
 
 

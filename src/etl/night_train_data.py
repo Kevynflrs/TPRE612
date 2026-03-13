@@ -87,6 +87,8 @@ def process_trips(file_name="trips.json"):
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce').dt.time
 
+    df['is_night_train'] = True
+            
     return df
 
 

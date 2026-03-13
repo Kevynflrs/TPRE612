@@ -27,7 +27,7 @@ def get_gares(
     country: Optional[str] = Query(None, description="Pays (ex: France, Germany)"),
     is_main_station: Optional[bool] = Query(None, description="Gare principale uniquement"),
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1),
     db: Session = Depends(get_db),
 ):
     query = db.query(DimGare)
