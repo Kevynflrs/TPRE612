@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import Optional
-from db.database import get_db
-from models.models import FactTrajetTrain, DimGare, DimTrain, DimOperateur
-from schemas.schemas import TrajetResponse, PaginatedResponse
+from src.api.db.database import get_db
+from src.api.models.models import FactTrajetTrain, DimGare, DimTrain, DimOperateur
+from src.api.schemas.schemas import TrajetResponse, PaginatedResponse
 
 router = APIRouter()
 

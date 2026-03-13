@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey
 from sqlalchemy.orm import relationship
-from db.database import Base
+from src.api.db.database import Base
 
 
 SCHEMA = "tpre612_data_warehouse"
