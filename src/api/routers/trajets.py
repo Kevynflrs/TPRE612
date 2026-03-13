@@ -41,7 +41,7 @@ def get_trajets(
     duree_max: Optional[float] = Query(None, description="Durée maximale en minutes"),
     # Pagination
     page: int = Query(1, ge=1, description="Numéro de page"),
-    page_size: int = Query(20, ge=1, description="Résultats par page (max 100)"),
+    page_size: int = Query(20, ge=1, description="Résultats par page"),
     db: Session = Depends(get_db),
 ):
     query = db.query(FactTrajetTrain).options(
