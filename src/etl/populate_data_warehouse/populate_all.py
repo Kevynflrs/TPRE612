@@ -1,11 +1,12 @@
 from database import DatabaseManager, DB_CONFIG
+import pandas as pd
 from dim_date import populate_dim_date
 from dim_energie import populate_dim_energie
 from dim_operateur import populate_dim_operateur    
 from dim_route import populate_dim_route
 from dim_train import populate_dim_train
 from dim_gare import populate_dim_gare
-from fact_trajet_train import populate_fact_trajet_train
+from fact_trajet_train import populate_fact_trajet_train, populate_all_from_clean
 
 
 def main():
@@ -24,6 +25,7 @@ def main():
     populate_dim_energie(db_clean, db_warehouse)
     populate_dim_gare(db_clean, db_warehouse)
     populate_fact_trajet_train(db_clean, db_warehouse)
+    populate_all_from_clean(db_clean, db_warehouse)
 
 if __name__ == "__main__":
     main()

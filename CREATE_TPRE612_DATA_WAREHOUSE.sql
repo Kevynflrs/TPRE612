@@ -73,3 +73,17 @@ CREATE TABLE tpre612_data_warehouse.fact_trajet_train (
     average_speed FLOAT,
     is_night_train BOOLEAN
 );
+
+
+-- dim_gare: needs unique on (name, country)
+ALTER TABLE tpre612_data_warehouse.dim_gare
+ADD CONSTRAINT uq_dim_gare_name_country UNIQUE (name, country);
+
+-- dim_date: needs unique on the combination of fields
+ALTER TABLE tpre612_data_warehouse.dim_date
+ADD CONSTRAINT uq_dim_date UNIQUE (start_date, end_date, monday, tuesday, wednesday, thursday, friday, saturday, sunday);
+
+-- dim_energie: needs unique on its natural key
+ALTER TABLE tpre612_data_warehouse.dim_energie
+ADD CONSTRAINT uq_dim_energie UNIQUE (geo, vehicle, energy_type, year);
+

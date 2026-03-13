@@ -17,6 +17,7 @@ def populate_dim_train(db_clean, db_warehouse):
         "destination_arrival_time": trips["destination_arrival_time"].apply(_safe_time),
         "duration":                 trips["duration"].apply(_safe_interval),
         "distance":                 pd.to_numeric(trips["distance"].astype(str).str.strip(), errors="coerce"),
+        "is_night_train":           trips["is_night_train"].astype(bool)
     })
 
     df = (
