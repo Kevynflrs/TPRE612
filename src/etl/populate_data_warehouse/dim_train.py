@@ -17,7 +17,7 @@ def populate_dim_train(db_clean, db_warehouse):
         "destination_arrival_time": trips["destination_arrival_time"].apply(_safe_time),
         "duration":                 trips["duration"].apply(_safe_interval),
         "distance":                 pd.to_numeric(trips["distance"].astype(str).str.strip(), errors="coerce"),
-        "is_night_train":           trips["is_night_train"].astype(bool)
+        "is_night_train":           _coerce_is_night_train(trips)
     })
 
     df = (
@@ -63,3 +63,17 @@ def _safe_interval(val):
         return pd.to_timedelta(str(val).strip())
     except Exception:
         return None
+
+
+def _coerce_is_night_train(df):
+    """Return a clean boolean Series; defaults to False when column is missing."""
+    if "is_night_train" not in df.columns:
+        return pd.Series(False, index=df.index, dtype=bool)
+
+    raw = df["is_night_train"]
+    if pd.api.types.is_bool_dtype(raw):
+        return raw.fillna(False).astype(bool)
+
+    true_values = {"1", "true", "t", "yes", "y", "oui", "vrai"}
+    normalized = raw.astype(str).str.strip().str.lower()
+    return normalized.isin(true_values)

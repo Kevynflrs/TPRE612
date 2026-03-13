@@ -127,7 +127,7 @@ def populate_fact_trajet_train(db_clean, db_warehouse):
         "emissions_co2":  df["emissions_co2"],
         "passengers":     df["passengers"],
         "average_speed":  df["average_speed_float"],
-        "is_night_train": df["is_night_train"].astype(bool)
+        "is_night_train": _coerce_is_night_train(df)
     })
 
     # Convert nullable int columns
@@ -148,6 +148,20 @@ def populate_fact_trajet_train(db_clean, db_warehouse):
         chunksize=1000
     )
     print("fact_trajet_train OK")
+
+
+def _coerce_is_night_train(df):
+    """Return a clean boolean Series; defaults to False when column is missing."""
+    if "is_night_train" not in df.columns:
+        return pd.Series(False, index=df.index, dtype=bool)
+
+    raw = df["is_night_train"]
+    if pd.api.types.is_bool_dtype(raw):
+        return raw.fillna(False).astype(bool)
+
+    true_values = {"1", "true", "t", "yes", "y", "oui", "vrai"}
+    normalized = raw.astype(str).str.strip().str.lower()
+    return normalized.isin(true_values)
 
 
 def populate_all_from_clean(db_clean, db_warehouse):
