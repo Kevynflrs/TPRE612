@@ -147,7 +147,7 @@ def populate_fact_trajet_train(db_clean, db_warehouse):
     fact = (
         fact.dropna(subset=["train_id"])
         .groupby(group_cols, dropna=False)["date_id"]
-        .apply(lambda ids: "{" + ",".join(str(int(i)) for i in sorted(i for i in ids if pd.notna(i))) + "}")
+        .apply(lambda ids: "{" + ",".join(str(int(i)) for i in sorted(set(i for i in ids if pd.notna(i)))) + "}")
         .reset_index()
         .rename(columns={"date_id": "date_ids"})
     )
