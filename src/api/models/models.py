@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, Date, ForeignKey, Time, Interval
+from sqlalchemy import ARRAY, Column, Integer, String, Float, Boolean, Date, ForeignKey, Time, Interval
 from sqlalchemy.orm import relationship
 from src.api.db.database import Base
 
@@ -96,7 +96,7 @@ class DimDate(Base):
     saturday = Column(Boolean)
     sunday = Column(Boolean)
 
-    trajets = relationship("FactTrajetTrain", foreign_keys="FactTrajetTrain.date_id", back_populates="date")
+    # No relationship back to FactTrajetTrain — ARRAY columns cannot carry a FK
 
 
 class DimEnergie(Base):
@@ -109,7 +109,6 @@ class DimEnergie(Base):
     energy_type = Column(String)
     year = Column(Integer)
     energy_value = Column(Float)
-    # No relationship to FactTrajetTrain — no FK exists
 
 
 class FactTrajetTrain(Base):
@@ -122,7 +121,7 @@ class FactTrajetTrain(Base):
     operator_id = Column(String, ForeignKey(f"{SCHEMA}.dim_operateur.agency_id"))
     gare_depart_id = Column(Integer, ForeignKey(f"{SCHEMA}.dim_gare.gare_id"))
     gare_arrivee_id = Column(Integer, ForeignKey(f"{SCHEMA}.dim_gare.gare_id"))
-    date_id = Column(Integer, ForeignKey(f"{SCHEMA}.dim_date.date_id"))
+    date_ids = Column(ARRAY(Integer))          # no ForeignKey — unsupported on arrays
     distance_km = Column(Float)
     duree_minutes = Column(Float)
     emissions_co2 = Column(Float)
@@ -135,5 +134,6 @@ class FactTrajetTrain(Base):
     operateur = relationship("DimOperateur", foreign_keys=[operator_id], primaryjoin="FactTrajetTrain.operator_id == DimOperateur.agency_id", back_populates="trajets")
     gare_depart = relationship("DimGare", foreign_keys=[gare_depart_id], back_populates="trajets_depart")
     gare_arrivee = relationship("DimGare", foreign_keys=[gare_arrivee_id], back_populates="trajets_arrivee")
-    date = relationship("DimDate", foreign_keys=[date_id], back_populates="trajets")
-    # energie relationship removed — no FK between fact_trajet_train and dim_energie
+    # date relationship removed — no FK possible on ARRAY column
+    # To query dates for a fact row, use:
+    #   session.query(DimDate).filter(DimDate.date_id.in_(fact.date_ids))

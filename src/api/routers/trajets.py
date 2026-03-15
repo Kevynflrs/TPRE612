@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session, joinedload, aliased
-from typing import Optional
+from sqlalchemy import func
+from typing import Optional, List
 from src.api.db.database import get_db
-from src.api.models.models import FactTrajetTrain, DimGare, DimTrain, DimOperateur
+from src.api.models.models import FactTrajetTrain, DimGare, DimTrain, DimOperateur, DimDate
 from src.api.schemas.schemas import TrajetResponse, PaginatedResponse
 
 router = APIRouter()
@@ -38,6 +39,8 @@ def get_trajets(
     distance_max: Optional[float] = Query(None, description="Distance maximale en km"),
     duree_min: Optional[float] = Query(None, description="Durée minimale en minutes"),
     duree_max: Optional[float] = Query(None, description="Durée maximale en minutes"),
+    # Filtre date (cherche si date_id est contenu dans le tableau date_ids)
+    date_id: Optional[int] = Query(None, description="Filtre sur un date_id présent dans le tableau"),
     # Pagination
     page: int = Query(1, ge=1, description="Numéro de page"),
     page_size: int = Query(20, ge=1, description="Résultats par page"),
@@ -112,6 +115,10 @@ def get_trajets(
     if duree_max is not None:
         query = query.filter(FactTrajetTrain.duree_minutes <= duree_max)
 
+    # Filter on array containment: date_id = ANY(date_ids)
+    if date_id is not None:
+        query = query.filter(FactTrajetTrain.date_ids.any(date_id))
+
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
 
@@ -130,8 +137,6 @@ def get_trajets(
     description="Retourne toutes les informations d'un trajet via son identifiant unique.",
 )
 def get_trajet(fact_id: int, db: Session = Depends(get_db)):
-    from fastapi import HTTPException
-
     trajet = (
         db.query(FactTrajetTrain)
         .options(
@@ -140,7 +145,7 @@ def get_trajet(fact_id: int, db: Session = Depends(get_db)):
             joinedload(FactTrajetTrain.train),
             joinedload(FactTrajetTrain.operateur),
             joinedload(FactTrajetTrain.route),
-            joinedload(FactTrajetTrain.date),
+            # date is no longer a relationship — loaded separately below if needed
         )
         .filter(FactTrajetTrain.fact_id == fact_id)
         .first()
@@ -148,5 +153,13 @@ def get_trajet(fact_id: int, db: Session = Depends(get_db)):
 
     if not trajet:
         raise HTTPException(status_code=404, detail=f"Trajet {fact_id} introuvable")
+
+    # Hydrate the associated DimDate rows from the date_ids array
+    if trajet.date_ids:
+        trajet._dates = db.query(DimDate).filter(
+            DimDate.date_id.in_(trajet.date_ids)
+        ).all()
+    else:
+        trajet._dates = []
 
     return trajet
