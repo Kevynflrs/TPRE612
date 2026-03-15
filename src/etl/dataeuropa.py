@@ -153,7 +153,7 @@ def _build_dim_train(df: pd.DataFrame, routes: pd.DataFrame) -> pd.DataFrame:
     if "from" not in df.columns or "to" not in df.columns:
         return pd.DataFrame()
 
-    cols = ["from", "to"] + (["operator"] if "operator" in df.columns else [])
+    cols = ["from", "to", "distance"] + (["operator"] if "operator" in df.columns else [])
     trains = df[cols].drop_duplicates().dropna(subset=["from", "to"]).copy()
     trains.rename(columns={"from": "origin", "to": "destination"}, inplace=True)
 
@@ -165,7 +165,6 @@ def _build_dim_train(df: pd.DataFrame, routes: pd.DataFrame) -> pd.DataFrame:
     trains["trip_id"] = [_stable_id(f"{r.origin}|{r.destination}|{i}", "TR_") for i, r in trains.iterrows()]
     trains["trip_headsign"] = trains["destination"]
     trains["duration"] = None
-    trains["distance"] = None
     trains["is_night_train"] = False
 
     logger.info(f"DIM_TRAIN : {len(trains)} trains distincts.")
@@ -203,17 +202,24 @@ def _build_fact(df: pd.DataFrame, trains: pd.DataFrame, routes: pd.DataFrame,
     fact["date_id"] = 1
 
     # Distance Haversine
-    lat_map = gares.set_index("name")["latitude"].to_dict() if not gares.empty else {}
-    lon_map = gares.set_index("name")["longitude"].to_dict() if not gares.empty else {}
-    if any(v is not None for v in lat_map.values()):
-        fact["distance_km"] = fact.apply(
-            lambda r: _haversine_km(lat_map.get(r["origin"]), lon_map.get(r["origin"]),
-                                    lat_map.get(r["destination"]), lon_map.get(r["destination"])), axis=1)
-    else:
-        fact["distance_km"] = None
+    # lat_map = gares.set_index("name")["latitude"].to_dict() if not gares.empty else {}
+    # lon_map = gares.set_index("name")["longitude"].to_dict() if not gares.empty else {}
+    # if any(v is not None for v in lat_map.values()):
+    #     fact["distance_km"] = fact.apply(
+    #         lambda r: _haversine_km(lat_map.get(r["origin"]), lon_map.get(r["origin"]),
+    #                                 lat_map.get(r["destination"]), lon_map.get(r["destination"])), axis=1)
+    # else:
+    #     fact["distance_km"] = None
+    fact["distance_km"] = trains["distance"]
 
     fact["duree_minutes"] = None
-    fact["emissions_co2"] = None
+
+    CO2_PER_KM_TRAIN = 0.014  # kg per passenger-km
+    fact["emissions_co2"] = (
+        fact["distance_km"].astype(float)
+        * CO2_PER_KM_TRAIN
+    )
+    
     fact["passengers"] = None
     fact["average_speed"] = None
     fact["is_night_train"] = False
