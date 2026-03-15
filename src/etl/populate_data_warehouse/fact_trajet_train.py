@@ -1,4 +1,5 @@
 import pandas as pd
+from sqlalchemy import text
 
 
 def populate_fact_trajet_train(db_clean, db_warehouse):
@@ -114,39 +115,73 @@ def populate_fact_trajet_train(db_clean, db_warehouse):
     df["emissions_co2"] = pd.to_numeric(
         df["emissions_co2e"].astype(str).str.strip(), errors="coerce")
 
-    # ---- Build final df ----
+    # ---- Build intermediate df ----
+    df["date_id_clean"] = pd.to_numeric(
+        df["date_id"], errors="coerce").astype("Int64")
+
     fact = pd.DataFrame({
-        "train_id":       df["trip_id"],
-        "route_id":       df["route_id_int"].astype(int),
-        "operator_id":    df["agency_id"],
-        "gare_depart_id": df["gare_depart_id"],
+        "train_id":        df["trip_id"],
+        "route_id":        df["route_id_int"].astype(int),
+        "operator_id":     df["agency_id"],
+        "gare_depart_id":  df["gare_depart_id"],
         "gare_arrivee_id": df["gare_arrivee_id"],
-        "date_id":        df["date_id"],
-        "distance_km":    df["distance_km"],
-        "duree_minutes":  df["duree_minutes"],
-        "emissions_co2":  df["emissions_co2"],
-        "passengers":     df["passengers"],
-        "average_speed":  df["average_speed_float"],
-        "is_night_train": _coerce_is_night_train(df)
+        "date_id":         df["date_id_clean"],
+        "distance_km":     df["distance_km"],
+        "duree_minutes":   df["duree_minutes"],
+        "emissions_co2":   df["emissions_co2"],
+        "passengers":      df["passengers"],
+        "average_speed":   df["average_speed_float"],
+        "is_night_train":  _coerce_is_night_train(df)
     })
 
-    # Convert nullable int columns
-    for col in ["gare_depart_id", "gare_arrivee_id", "date_id"]:
+    for col in ["gare_depart_id", "gare_arrivee_id"]:
         fact[col] = pd.to_numeric(fact[col], errors="coerce").astype("Int64")
 
-    fact = fact.dropna(subset=["train_id"]).reset_index(drop=True)
+    # ---- Collapse duplicate rows: aggregate date_id into a sorted PG array literal ----
+    group_cols = [
+        "train_id", "route_id", "operator_id", "gare_depart_id",
+        "gare_arrivee_id", "distance_km", "duree_minutes",
+        "emissions_co2", "passengers", "average_speed", "is_night_train"
+    ]
+
+    fact = (
+        fact.dropna(subset=["train_id"])
+        .groupby(group_cols, dropna=False)["date_id"]
+        .apply(lambda ids: "{" + ",".join(str(int(i)) for i in sorted(ids) if pd.notna(i)) + "}")
+        .reset_index()
+        .rename(columns={"date_id": "date_ids"})
+    )
+
+    # Guarantee date_ids is never None/NaN — fallback to empty PG array
+    fact["date_ids"] = fact["date_ids"].fillna("{}").replace("", "{}")
+
     print(f"Lignes fact_trajet_train à insérer : {len(fact)}")
 
-    # fact table is append-only — use plain insert (no conflict key)
-    fact.to_sql(
-        "fact_trajet_train",
-        db_warehouse.engine,
-        schema="tpre612_data_warehouse",
-        if_exists="append",
-        index=False,
-        method="multi",
-        chunksize=1000
-    )
+    # Build records AFTER date_ids is finalised; replace NaN with None only for other columns
+    records = [
+        {k: (None if k != "date_ids" and (v != v or v is None) else v)
+         for k, v in row.items()}
+        for row in fact.to_dict(orient="records")
+    ]
+
+    chunk_size = 1000
+    with db_warehouse.engine.begin() as conn:
+        for i in range(0, len(records), chunk_size):
+            chunk = records[i:i + chunk_size]
+            conn.execute(
+                text("""
+                    INSERT INTO tpre612_data_warehouse.fact_trajet_train
+                        (train_id, route_id, operator_id, gare_depart_id, gare_arrivee_id,
+                         distance_km, duree_minutes, emissions_co2, passengers,
+                         average_speed, is_night_train, date_ids)
+                    VALUES
+                        (:train_id, :route_id, :operator_id, :gare_depart_id, :gare_arrivee_id,
+                         :distance_km, :duree_minutes, :emissions_co2, :passengers,
+                         :average_speed, :is_night_train, CAST(:date_ids AS INTEGER[]))
+                """),
+                chunk
+            )
+
     print("fact_trajet_train OK")
 
 
@@ -245,22 +280,53 @@ def populate_all_from_clean(db_clean, db_warehouse):
     # ---- 6. fact_trajet_train ----
     fact = db_clean.get_data_from_table("fact_trajet_train")
     print(fact.columns)
-    warehouse_cols = ["train_id", "route_id", "operator_id", "gare_depart_id", "gare_arrivee_id", "date_id",
-                      "distance_km", "duree_minutes", "emissions_co2", "passengers", "average_speed", "is_night_train"]
+    warehouse_cols = ["train_id", "route_id", "operator_id", "gare_depart_id",
+                      "gare_arrivee_id", "date_ids", "distance_km", "duree_minutes",
+                      "emissions_co2", "passengers", "average_speed", "is_night_train"]
     fact = fact[[c for c in warehouse_cols if c in fact.columns]]
     fact = fact.dropna(subset=["train_id"]).reset_index(drop=True)
-    for col in ["gare_depart_id", "gare_arrivee_id", "date_id", "route_id"]:
+
+    for col in ["gare_depart_id", "gare_arrivee_id", "route_id"]:
         if col in fact.columns:
             fact[col] = pd.to_numeric(
                 fact[col], errors="coerce").astype("Int64")
+
+    # Normalise date_ids to PG array literal, always present
+    if "date_ids" in fact.columns:
+        def _normalize_date_ids(val):
+            if isinstance(val, list):
+                return "{" + ",".join(str(int(i)) for i in val if pd.notna(i)) + "}"
+            if isinstance(val, str) and val.startswith("{"):
+                return val
+            return "{}"
+        fact["date_ids"] = fact["date_ids"].apply(_normalize_date_ids)
+    else:
+        fact["date_ids"] = "{}"
+
     print(f"fact_trajet_train : {len(fact)} lignes")
-    fact.to_sql(
-        "fact_trajet_train",
-        db_warehouse.engine,
-        schema="tpre612_data_warehouse",
-        if_exists="append",
-        index=False,
-        method="multi",
-        chunksize=1000
-    )
+
+    records = [
+        {k: (None if k != "date_ids" and (v != v or v is None) else v)
+         for k, v in row.items()}
+        for row in fact.to_dict(orient="records")
+    ]
+
+    chunk_size = 1000
+    with db_warehouse.engine.begin() as conn:
+        for i in range(0, len(records), chunk_size):
+            chunk = records[i:i + chunk_size]
+            conn.execute(
+                text("""
+                    INSERT INTO tpre612_data_warehouse.fact_trajet_train
+                        (train_id, route_id, operator_id, gare_depart_id, gare_arrivee_id,
+                         distance_km, duree_minutes, emissions_co2, passengers,
+                         average_speed, is_night_train, date_ids)
+                    VALUES
+                        (:train_id, :route_id, :operator_id, :gare_depart_id, :gare_arrivee_id,
+                         :distance_km, :duree_minutes, :emissions_co2, :passengers,
+                         :average_speed, :is_night_train, CAST(:date_ids AS INTEGER[]))
+                """),
+                chunk
+            )
+
     print("fact_trajet_train OK")

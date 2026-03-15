@@ -65,7 +65,7 @@ CREATE TABLE tpre612_data_warehouse.fact_trajet_train (
     operator_id TEXT REFERENCES tpre612_data_warehouse.dim_operateur(agency_id),
     gare_depart_id INT REFERENCES tpre612_data_warehouse.dim_gare(gare_id),
     gare_arrivee_id INT REFERENCES tpre612_data_warehouse.dim_gare(gare_id),
-    date_id INT REFERENCES tpre612_data_warehouse.dim_date(date_id),
+    date_ids INTEGER[],
     distance_km FLOAT,
     duree_minutes FLOAT,
     emissions_co2 FLOAT,
