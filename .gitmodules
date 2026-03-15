@@ -1,3 +1,6 @@
 [submodule "data/night-train-data"]
 	path = data/night-train-data
-	url = git@github.com:Back-on-Track-eu/night-train-data.git
+	url = https://github.com/Back-on-Track-eu/night-train-data
+[submodule "data/husahuc_data_france"]
+	path = data/husahuc_data_france
+	url = https://gitlab.com/husahuc/gtfs_france.git

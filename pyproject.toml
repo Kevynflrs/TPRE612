@@ -1,0 +1,18 @@
+[project]
+name = "tpre612"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11.14"
+dependencies = [
+    "fastapi==0.115.0",
+    "missingno>=0.5.2",
+    "pandas>=3.0.1",
+    "psycopg2-binary==2.9.9",
+    "pydantic==2.9.2",
+    "python-dotenv==1.0.1",
+    "requests>=2.32.5",
+    "psycopg2-binary>=2.9.0",
+    "sqlalchemy>=2.0.48",
+    "uvicorn[standard]==0.30.6",
+]
