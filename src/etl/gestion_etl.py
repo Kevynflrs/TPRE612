@@ -13,6 +13,7 @@ from night_train_data import get_night_train_data
 from dataeuropa import get_data_europa
 from data_gouv import get_data_gouv
 from CO2 import get_co2_data
+from etl.etl_opdi import get_opdi_data
 
 # --- CONFIGURATION LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -160,6 +161,11 @@ def main():
     # CO2 Data
     co2_data = get_co2_data()
     db.load_dataset(co2_data, table_name="co2_emissions")
+    
+    #Plane data
+    opdi_data = get_opdi_data(start="2024-01", end="2025-01", dry_run=False)
+    for name, df in opdi_data.items():
+        db.load_dataset(df, table_name=name)
 
 
 if __name__ == "__main__":
