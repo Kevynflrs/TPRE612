@@ -113,7 +113,7 @@ def populate_fact_trajet_train(db_clean, db_warehouse):
     df["duree_minutes"] = pd.to_timedelta(df["duration"].astype(
         str).str.strip(), errors="coerce").dt.total_seconds() / 60
     df["emissions_co2"] = pd.to_numeric(
-        df["emissions_co2e"].astype(str).str.strip(), errors="coerce")
+        df["co2_per_km"].astype(str).str.strip(), errors="coerce")
 
     # ---- Build intermediate df ----
     df["date_id_clean"] = pd.to_numeric(
