@@ -1,19 +1,31 @@
-from sqlalchemy import Table, Column, MetaData, create_engine, text
-from sqlalchemy.dialects.postgresql import insert
+from pathlib import Path
+from typing import Dict, List
+from urllib.parse import quote_plus
+
 import pandas as pd
-from typing import List, Dict
+from dotenv import load_dotenv
+from sqlalchemy import Column, MetaData, Table, create_engine, text
+from sqlalchemy.dialects.postgresql import insert
+import os
+
+
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
+
 DB_CONFIG = {
-    "dbname": "TPRE612",
-    "user": "postgres",
-    "password": "1234",
-    "host": "localhost",
-    "port": 5432
+    "dbname": os.getenv("DB_NAME", "TPRE612"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "1234"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
 }
 
 
 class DatabaseManager:
     def __init__(self, config: Dict, schema: str = "public"):
-        url = f"postgresql://{config['user']}:{config['password']}@{config['host']}:{config['port']}/{config['dbname']}"
+        url = (
+            f"postgresql://{quote_plus(str(config['user']))}:{quote_plus(str(config['password']))}"
+            f"@{config['host']}:{config['port']}/{config['dbname']}"
+        )
         self.engine = create_engine(url)
         self.schema = schema
 

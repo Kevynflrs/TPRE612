@@ -1,12 +1,18 @@
 import logging
+import os
+from pathlib import Path
+from typing import Dict, List, Optional
+from urllib.parse import quote_plus
+
 import pandas as pd
-from typing import List, Optional, Dict
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect, text
 
 # Use absolute imports instead of relative imports
 import sys
-from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 from eurostat import get_eurostat_data
 from night_train_data import get_night_train_data
@@ -21,19 +27,24 @@ logger = logging.getLogger(__name__)
 
 # --- CONFIGURATION BASE DE DONNÉES ---
 DB_CONFIG = {
-    "dbname": "TPRE612",
-    "user": "postgres",
-    "password": "1234",
-    "host": "localhost",
-    "port": 5432
+    "dbname": os.getenv("DB_NAME", "TPRE612"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "1234"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
 }
+
+ETL_SCHEMA = os.getenv("ETL_DB_SCHEMA", "tpre612_dataset_clean")
 
 
 class DatabaseManager:
     """Classe utilitaire pour gérer la connexion et l'écriture en base de données."""
     
     def __init__(self, config: Dict, schema: str = "public"):
-        url = f"postgresql://{config['user']}:{config['password']}@{config['host']}:{config['port']}/{config['dbname']}"
+        url = (
+            f"postgresql://{quote_plus(str(config['user']))}:{quote_plus(str(config['password']))}"
+            f"@{config['host']}:{config['port']}/{config['dbname']}"
+        )
         self.engine = create_engine(url)
         self.schema = schema
 
@@ -123,7 +134,7 @@ class DatabaseManager:
 def main():
     # Initialiser la connexion DB
     try:
-        db = DatabaseManager(DB_CONFIG, schema="tpre612_dataset_clean")
+        db = DatabaseManager(DB_CONFIG, schema=ETL_SCHEMA)
         logger.info("Connexion Base de données OK.")
     except Exception as e:
         logger.critical(f"Impossible de se connecter à la DB : {e}")
@@ -160,7 +171,10 @@ def main():
         
     # CO2 Data
     co2_data = get_co2_data()
-    db.load_dataset(co2_data, table_name="co2_emissions")
+    if co2_data is not None:
+        db.load_dataset(co2_data, table_name="co2_emissions")
+    else:
+        logger.warning("Dataset vide pour co2_emissions, on saute.")
 
     # SNCF Data
     sncf_data = get_sncf_data()
