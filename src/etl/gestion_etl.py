@@ -19,6 +19,7 @@ from night_train_data import get_night_train_data
 from dataeuropa import get_data_europa
 from data_gouv import get_data_gouv
 from CO2 import get_co2_data
+from sncf import get_sncf_data
 
 # --- CONFIGURATION LOGGING ---
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -175,6 +176,9 @@ def main():
     else:
         logger.warning("Dataset vide pour co2_emissions, on saute.")
 
+    # SNCF Data
+    sncf_data = get_sncf_data()
+    db.load_dataset(sncf_data, table_name="sncf_emissions")
 
 if __name__ == "__main__":
     main()
