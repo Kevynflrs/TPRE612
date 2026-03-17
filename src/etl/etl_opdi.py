@@ -175,11 +175,11 @@ def _process_month(ym: str, airport_names: dict[str, str]) -> pd.DataFrame:
     logger.info("[OPDI] Month %s: %s meas files, %s event files", ym, len(meas_frames), len(ev_frames))
 
     df_meas = pd.concat(meas_frames, ignore_index=True)
-    df_ev   = pd.concat(ev_frames, ignore_index=True)
+    df_ev = pd.concat(ev_frames, ignore_index=True)
     del meas_frames, ev_frames
 
     df_meas.columns = [c.strip().lower() for c in df_meas.columns]
-    df_ev.columns   = [c.strip().lower() for c in df_ev.columns]
+    df_ev.columns = [c.strip().lower() for c in df_ev.columns]
 
     # Build event_id -> flight_id mapping
     mapping = (
@@ -226,7 +226,7 @@ def _process_month(ym: str, airport_names: dict[str, str]) -> pd.DataFrame:
         df_fl
         .merge(df_dist, on="flight_id", how="left")
         .merge(df_time, on="flight_id", how="left")
-        .merge(ts,      on="flight_id", how="left")
+        .merge(ts, on="flight_id", how="left")
     )
     del df_fl, df_dist, df_time, ts
 
@@ -271,9 +271,9 @@ def get_opdi_data(
     Downloads and transforms OPDI data into a fact table.
 
     Args:
-        start:        First month to download, format YYYY-MM.
-        end:          Last month to download, format YYYY-MM.
-        dry_run:      If True, limits to a single month (2022-01) for testing.
+        start: First month to download, format YYYY-MM.
+        end: Last month to download, format YYYY-MM.
+        dry_run: If True, limits to a single month (2022-01) for testing.
         airports_csv: Path to airports.csv (OurAirports format).
 
     Returns:
