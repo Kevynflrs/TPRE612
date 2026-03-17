@@ -234,7 +234,7 @@ def populate_all_from_clean(db_clean, db_warehouse):
 
     # ---- 3. dim_train ----
     df = db_clean.get_data_from_table("dim_train")
-    warehouse_cols = ["trip_id", "route_id", "trip_headsign", "trip_origin",
+    warehouse_cols = ["trip_id", "route_id", "trip_headsign", "origin"
                       "destination_arrival_time", "duration", "distance", "is_night_train"]
     df = df[[c for c in warehouse_cols if c in df.columns]]
     valid_routes = set(db_warehouse.get_data_from_table(
