@@ -16,6 +16,7 @@ Fonctionnalités
 - Compatible Grafana (JSON datasource)
     """,
     version="1.0.0",
+    root_path="/api"
 )
 
 app.add_middleware(
@@ -29,7 +30,8 @@ app.add_middleware(
 app.include_router(trajets.router, prefix="/trajets", tags=["Trajets"])
 app.include_router(gares.router, prefix="/gares", tags=["Gares"])
 app.include_router(trains.router, prefix="/trains", tags=["Trains"])
-app.include_router(operateurs.router, prefix="/operateurs", tags=["Opérateurs"])
+app.include_router(operateurs.router, prefix="/operateurs",
+                   tags=["Opérateurs"])
 app.include_router(routes.router, prefix="/routes", tags=["Routes"])
 app.include_router(stats.router, prefix="/stats", tags=["Statistiques"])
 
